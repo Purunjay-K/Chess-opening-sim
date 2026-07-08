@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { whiteOpenings, blackOpenings } from "@/data/openings";
@@ -11,6 +12,8 @@ export default function SetupPage() {
   const [rating, setRating] = useState(1200);
   const [side, setSide] = useState("white");
   const [opening, setOpening] = useState(blackOpenings[0]);
+
+  const router = useRouter();
 
   return (
     <main className="min-h-screen bg-slate-900 text-white flex justify-center items-center">
@@ -92,12 +95,20 @@ export default function SetupPage() {
     ))}
   </select>
 </div>
-<Link
-  href="/practice"
-  className="mt-8 block w-full rounded-lg bg-green-600 py-3 text-center text-lg font-semibold hover:bg-green-700 transition"
+<button
+  onClick={() => {
+    const params = new URLSearchParams({
+      rating: rating.toString(),
+      side,
+      opening,
+    });
+
+    router.push(`/practice?${params.toString()}`);
+  }}
+  className="mt-8 w-full rounded-lg bg-green-600 py-3 text-lg font-semibold hover:bg-green-700 transition"
 >
   Start Practicing
-</Link>
+</button>
 
       </div>
     </main>
