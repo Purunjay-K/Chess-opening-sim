@@ -1,37 +1,21 @@
-interface OpeningBookNode {
-  children?: Record<string, OpeningBookNode>;
+interface Repertoire {
+  moves: string[];
 }
 
 export class OpeningEngine {
-  private openingBook: OpeningBookNode;
+  private repertoire: Repertoire;
 
-  constructor(openingBook: OpeningBookNode) {
-    this.openingBook = openingBook;
-  }
-
-  private getNode(moveHistory: string[]): OpeningBookNode | null {
-    let currentNode = this.openingBook;
-
-    for (const move of moveHistory) {
-      const nextNode = currentNode.children?.[move];
-
-      if (!nextNode) {
-        return null;
-      }
-
-      currentNode = nextNode;
-    }
-
-    return currentNode;
+  constructor(repertoire: Repertoire) {
+    this.repertoire = repertoire;
   }
 
   getReplies(moveHistory: string[]): string[] {
-    const node = this.getNode(moveHistory);
+    const nextMove = this.repertoire.moves[moveHistory.length];
 
-    if (!node?.children) {
+    if (!nextMove) {
       return [];
     }
 
-    return Object.keys(node.children);
+    return [nextMove];
   }
 }

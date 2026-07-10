@@ -1,8 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
-import { whiteOpenings, blackOpenings } from "@/data/openings";
+import { repertoires } from "@/data/repertoires";
+
+
+const whiteRepertoires = repertoires.filter(r => r.color === "white");
+const blackRepertoires = repertoires.filter(r => r.color === "black");
 
 
 
@@ -11,7 +14,9 @@ const ratings = Array.from({ length: 30 }, (_, i) => (i + 1) * 100);
 export default function SetupPage() {
   const [rating, setRating] = useState(1200);
   const [side, setSide] = useState("white");
-  const [opening, setOpening] = useState(blackOpenings[0]);
+  const [opening, setOpening] = useState(
+  blackRepertoires[0].id
+);
 
   const router = useRouter();
 
@@ -51,7 +56,7 @@ export default function SetupPage() {
               checked={side === "white"}
               onChange={() => {
             setSide("white");
-            setOpening(blackOpenings[0]);
+            setOpening(blackRepertoires[0].id);
 }}
             />
 
@@ -67,7 +72,7 @@ export default function SetupPage() {
               checked={side === "black"}
               onChange={() => {
             setSide("black");
-            setOpening(whiteOpenings[0]);
+            setOpening(whiteRepertoires[0].id);
 }}
             />
 
@@ -88,11 +93,14 @@ export default function SetupPage() {
     onChange={(e) => setOpening(e.target.value)}
     className="w-full rounded-lg bg-slate-700 p-3"
   >
-    {(side === "white" ? blackOpenings : whiteOpenings).map((item) => (
-      <option key={item} value={item}>
-        {item}
-      </option>
-    ))}
+    {(side === "white"
+  ? blackRepertoires
+  : whiteRepertoires
+).map((rep) => (
+  <option key={rep.id} value={rep.id}>
+    {rep.name}
+  </option>
+))}
   </select>
 </div>
 <button
@@ -102,6 +110,9 @@ export default function SetupPage() {
       side,
       opening,
     });
+
+    console.log("Opening:", opening);
+    console.log("Navigating to:", `/practice?${params.toString()}`);
 
     router.push(`/practice?${params.toString()}`);
   }}
