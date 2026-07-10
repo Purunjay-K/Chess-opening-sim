@@ -4,29 +4,22 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
-import { OpeningEngine } from "@/lib/openingEngine";
-
-import { repertoires, getRepertoire } from "@/data/repertoires";
+import { getRepertoire } from "@/data/repertoires";
 
 export default function PracticePage() {
   const [game, setGame] = useState(() => new Chess());
+
   const searchParams = useSearchParams();
+
   const openingId = searchParams.get("opening") ?? "";
-  console.log("Opening ID:", openingId);
-console.log("Available repertoires:", repertoires);
-console.log("Found:", getRepertoire(openingId));
-const repertoire = getRepertoire(openingId);
+  const repertoire = getRepertoire(openingId);
 
-if (!repertoire) {
-  return <div>Opening not found.</div>;
-}
-
-const [engine] = useState(() => new OpeningEngine(repertoire));
-  
+  if (!repertoire) {
+    return <div>Opening not found.</div>;
+  }
 
   const rating = searchParams.get("rating");
   const side = searchParams.get("side");
-  const opening = searchParams.get("opening");
 
   function onDrop({
     sourceSquare,
@@ -50,17 +43,27 @@ const [engine] = useState(() => new OpeningEngine(repertoire));
 
       console.log("Player played:", move.san);
 
-      const replies = engine.getReplies(copy.history());
+const history = copy.history();
 
-      console.log("Engine replies:", replies);
+// This is the move the player SHOULD have played
+const expectedPlayerMove = repertoire.moves[history.length - 1];
 
-      if (replies.length > 0) {
-        const reply = replies[0];
+if (move.san !== expectedPlayerMove) {
+  alert(
+    `Incorrect move!\n\nExpected: ${expectedPlayerMove}\nYou played: ${move.san}`
+  );
 
-        console.log("Computer plays:", reply);
+  return false;
+}
 
-        copy.move(reply);
-      }
+// Engine plays the next move in the repertoire
+const nextMove = repertoire.moves[history.length];
+
+console.log("Next theory move:", nextMove);
+
+if (nextMove) {
+  copy.move(nextMove);
+}
 
       setGame(copy);
 
@@ -70,8 +73,6 @@ const [engine] = useState(() => new OpeningEngine(repertoire));
       return false;
     }
   }
-
-  console.log(engine.getReplies(game.history()));
 
   return (
     <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
