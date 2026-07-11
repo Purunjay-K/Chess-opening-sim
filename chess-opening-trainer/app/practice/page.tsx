@@ -1,25 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
-import { getRepertoire } from "@/data/repertoires";
+
+import openingBook from "@/data/books/master.json";
+import { OpeningEngine } from "@/lib/openingEngine";
+import { getOpening } from "@/data/openingIndex";
+import { StockfishService } from "@/lib/stockfish/StockfishService";
 
 export default function PracticePage() {
-  const [game, setGame] = useState(() => new Chess());
-
   const searchParams = useSearchParams();
 
   const openingId = searchParams.get("opening") ?? "";
-  const repertoire = getRepertoire(openingId);
-
-  if (!repertoire) {
-    return <div>Opening not found.</div>;
-  }
-
   const rating = searchParams.get("rating");
   const side = searchParams.get("side");
+
+  const opening = getOpening(openingId);
+
+  if (!opening) {
+    return <div className="text-white p-10">Opening not found.</div>;
+  }
+
+  const [game, setGame] = useState(() => new Chess());
+
+  const [engine] = useState(
+    () => new OpeningEngine(openingBook, opening.startMoves)
+  );
+
+  useEffect(() => {
+    const stockfish = new StockfishService();
+    stockfish.init();
+  }, []);
 
   function onDrop({
     sourceSquare,
@@ -43,27 +56,24 @@ export default function PracticePage() {
 
       console.log("Player played:", move.san);
 
-const history = copy.history();
+      // Check if player's move is still in the opening book
+      const valid = engine.playPlayerMove(move.san);
 
-// This is the move the player SHOULD have played
-const expectedPlayerMove = repertoire.moves[history.length - 1];
+      if (!valid) {
+        alert("That move is not in the selected opening.");
+        return false;
+      }
 
-if (move.san !== expectedPlayerMove) {
-  alert(
-    `Incorrect move!\n\nExpected: ${expectedPlayerMove}\nYou played: ${move.san}`
-  );
+      // Engine book move
+      const reply = engine.getEngineMove();
 
-  return false;
-}
-
-// Engine plays the next move in the repertoire
-const nextMove = repertoire.moves[history.length];
-
-console.log("Next theory move:", nextMove);
-
-if (nextMove) {
-  copy.move(nextMove);
-}
+      if (reply) {
+        console.log("Book reply:", reply);
+        copy.move(reply);
+      } else {
+        console.log("Opening book finished.");
+        // Stockfish will take over here later
+      }
 
       setGame(copy);
 
@@ -77,9 +87,7 @@ if (nextMove) {
   return (
     <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold">
-          Chess Opening Sim
-        </h1>
+        <h1 className="text-4xl font-bold">Chess Opening Sim</h1>
 
         <p className="mt-4">
           Rating: <strong>{rating}</strong>
@@ -90,7 +98,7 @@ if (nextMove) {
         </p>
 
         <p>
-          Opening: <strong>{repertoire.name}</strong>
+          Opening: <strong>{opening.name}</strong>
         </p>
       </div>
 

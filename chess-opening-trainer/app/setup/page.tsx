@@ -1,11 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { repertoires } from "@/data/repertoires";
+import {
+  getWhiteOpenings,
+  getBlackOpenings,
+} from "@/data/openingIndex";
 
-
-const whiteRepertoires = repertoires.filter(r => r.color === "white");
-const blackRepertoires = repertoires.filter(r => r.color === "black");
+const whiteOpenings = getWhiteOpenings();
+const blackOpenings = getBlackOpenings();
 
 
 
@@ -15,7 +17,7 @@ export default function SetupPage() {
   const [rating, setRating] = useState(1200);
   const [side, setSide] = useState("white");
   const [opening, setOpening] = useState(
-  blackRepertoires[0].id
+  blackOpenings[0].id
 );
 
   const router = useRouter();
@@ -56,7 +58,7 @@ export default function SetupPage() {
               checked={side === "white"}
               onChange={() => {
             setSide("white");
-            setOpening(blackRepertoires[0].id);
+            setOpening(blackOpenings[0].id);
 }}
             />
 
@@ -72,7 +74,7 @@ export default function SetupPage() {
               checked={side === "black"}
               onChange={() => {
             setSide("black");
-            setOpening(whiteRepertoires[0].id);
+            setOpening(whiteOpenings[0].id);
 }}
             />
 
@@ -94,8 +96,8 @@ export default function SetupPage() {
     className="w-full rounded-lg bg-slate-700 p-3"
   >
     {(side === "white"
-  ? blackRepertoires
-  : whiteRepertoires
+  ? blackOpenings
+  : whiteOpenings
 ).map((rep) => (
   <option key={rep.id} value={rep.id}>
     {rep.name}
@@ -110,9 +112,6 @@ export default function SetupPage() {
       side,
       opening,
     });
-
-    console.log("Opening:", opening);
-    console.log("Navigating to:", `/practice?${params.toString()}`);
 
     router.push(`/practice?${params.toString()}`);
   }}
