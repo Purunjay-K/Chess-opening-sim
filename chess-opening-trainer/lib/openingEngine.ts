@@ -1,74 +1,106 @@
+import { OpeningSequence } from "./OpeningSequence";
+
 interface OpeningBookNode {
   move?: string;
   children?: Record<string, OpeningBookNode>;
 }
 
 export class OpeningEngine {
+  private sequence: OpeningSequence;
   private currentNode: OpeningBookNode;
-
-  private startMoves: string[];
-  private startIndex = 0;
 
   constructor(
     openingBook: OpeningBookNode,
-    startingMoves: string[]
+    startingMoves: string[],
+    playerColor: "white" | "black"
   ) {
     this.currentNode = openingBook;
-    this.startMoves = startingMoves;
-    console.log("Root moves:", Object.keys(this.currentNode.children ?? {}));
+    this.sequence = new OpeningSequence(
+      startingMoves,
+      playerColor
+    );
+
+    console.log("========== OpeningEngine ==========");
+    console.log("Engine created");
+    console.log("Player:", playerColor);
+    console.log("Opening:", startingMoves.join(" "));
   }
 
   /**
-   * Are we still forcing the opening moves?
+   * Is the opening sequence finished?
    */
-  private isInStartingSequence(): boolean {
-    return this.startIndex < this.startMoves.length;
+  private inSequence(): boolean {
+    return !this.sequence.isFinished();
   }
 
   /**
-   * All legal moves from the current book position.
+   * Should the player move?
    */
-  getLegalMoves(): string[] {
-    return Object.keys(this.currentNode.children ?? {});
+  isPlayersTurn(): boolean {
+    if (this.inSequence()) {
+      return this.sequence.isPlayersTurn();
+    }
+
+    return true;
   }
 
   /**
-   * Player plays a move.
+   * Should the engine move?
    */
-  playPlayerMove(move: string): boolean {
+  isEngineTurn(): boolean {
+    if (this.inSequence()) {
+      return this.sequence.isEngineTurn();
+    }
 
-    console.log("----------------");
-    console.log("Current legal moves:", this.getLegalMoves());
-    console.log("Player played:", move);
+    return false;
+  }
 
-    // ---------- Phase 1 ----------
-    // Force the player into the chosen opening.
-    if (this.isInStartingSequence()) {
+  /**
+   * Player makes a move.
+   */
+  makePlayerMove(move: string): boolean {
 
-      const expected = this.startMoves[this.startIndex];
+    console.log("");
+    console.log("========== OpeningEngine ==========");
+    console.log("Player:", move);
 
-      if (move !== expected) {
-        console.log("Move NOT found!");
+    // --------------------------
+    // Opening Sequence
+    // --------------------------
+
+    if (this.inSequence()) {
+
+      console.log("Phase: Opening Sequence");
+
+      const accepted =
+        this.sequence.playPlayerMove(move);
+
+      if (!accepted) {
         return false;
       }
 
-      const next = this.currentNode.children?.[move];
+      const next =
+        this.currentNode.children?.[move];
 
-      if (!next) {
-        return false;
+      if (next) {
+        this.currentNode = next;
       }
-
-      this.currentNode = next;
-      this.startIndex++;
 
       return true;
     }
 
-    // ---------- Phase 2 ----------
-    // Free play inside the opening tree.
-    const next = this.currentNode.children?.[move];
+    // --------------------------
+    // Opening Tree
+    // --------------------------
+
+    console.log("Phase: Opening Tree");
+
+    const next =
+      this.currentNode.children?.[move];
 
     if (!next) {
+      console.log("Move not found in tree.");
+
       return false;
     }
 
@@ -78,46 +110,115 @@ export class OpeningEngine {
   }
 
   /**
-   * Engine move.
+   * Engine makes a move.
    */
-  getEngineMove(): string | null {
+  makeEngineMove(): string | null {
 
-    // ---------- Phase 1 ----------
-    if (this.isInStartingSequence()) {
+    console.log("");
+    console.log("========== OpeningEngine ==========");
+    console.log("Engine requested move");
 
-      const move = this.startMoves[this.startIndex];
+    // --------------------------
+    // Opening Sequence
+    // --------------------------
 
-      const next = this.currentNode.children?.[move];
+    if (this.inSequence()) {
 
-      if (!next) {
+      console.log("Phase: Opening Sequence");
 
+      const move =
+        this.sequence.playEngineMove();
+
+      if (!move) {
         return null;
       }
 
-      this.currentNode = next;
-      this.startIndex++;
-      console.log("Engine chooses:", move);
-  console.log("Next legal moves:", this.getLegalMoves());
+      const next =
+        this.currentNode.children?.[move];
+
+      if (next) {
+        this.currentNode = next;
+      }
+
       return move;
     }
 
-    // ---------- Phase 2 ----------
-    const legalMoves = this.getLegalMoves();
+    // --------------------------
+    // Opening Tree
+    // --------------------------
+
+    console.log("Phase: Opening Tree");
+
+    const legalMoves =
+      Object.keys(this.currentNode.children ?? {});
+
+    console.log("Legal Moves:", legalMoves);
 
     if (legalMoves.length === 0) {
+
+      console.log("Opening book finished.");
+
       return null;
     }
 
-    // Temporary:
-    // Later we'll choose randomly or by popularity.
+    /**
+     * Temporary:
+     * Always play the first move.
+     * Later this becomes weighted random.
+     */
     const move = legalMoves[0];
 
-    this.currentNode = this.currentNode.children![move];
+    this.currentNode =
+      this.currentNode.children![move];
+
+    console.log("Engine chooses:", move);
 
     return move;
   }
 
+  /**
+   * All legal theory moves
+   * from the current position.
+   */
+  getLegalMoves(): string[] {
+
+    return Object.keys(
+      this.currentNode.children ?? {}
+    );
+
+  }
+
+  /**
+   * Book finished?
+   */
   isBookFinished(): boolean {
-    return this.getLegalMoves().length === 0;
+
+    return (
+      !this.inSequence() &&
+      this.getLegalMoves().length === 0
+    );
+
+  }
+
+  /**
+   * Debug helper.
+   */
+  printStatus() {
+
+    console.log("");
+    console.log("========== Engine Status ==========");
+
+    console.log(
+      "Opening Sequence Finished:",
+      !this.inSequence()
+    );
+
+    console.log(
+      "Legal Moves:",
+      this.getLegalMoves()
+    );
+
+    this.sequence.printStatus();
+
   }
 }
