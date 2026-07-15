@@ -81,10 +81,21 @@ export class OpeningEngine {
 
       const next =
         this.currentNode.children?.[move];
+        console.log("Engine moved to:", move);
+console.log(
+  "Next legal moves:",
+  Object.keys(this.currentNode.children ?? {})
+);
 
       if (next) {
-        this.currentNode = next;
-      }
+  this.currentNode = next;
+
+  console.log("Moved to node:", move);
+  console.log(
+    "Next legal moves:",
+    Object.keys(this.currentNode.children ?? {})
+  );
+}
 
       return true;
     }
