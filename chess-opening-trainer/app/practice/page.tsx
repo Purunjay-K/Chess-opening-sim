@@ -1,5 +1,5 @@
 "use client";
-
+import { StockfishService } from "@/lib/stockfish/StockfishService";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Chess } from "chess.js";
@@ -8,7 +8,7 @@ import { Chessboard } from "react-chessboard";
 import openingBook from "@/data/books/master.json";
 import { OpeningEngine } from "@/lib/openingEngine";
 import { getOpening } from "@/data/openingIndex";
-import { StockfishService } from "@/lib/stockfish/StockfishService";
+
 
 export default function PracticePage() {
   const searchParams = useSearchParams();
@@ -38,6 +38,9 @@ export default function PracticePage() {
         side
       )
   );
+  const [stockfish] = useState(
+  () => new StockfishService()
+);
 
   console.log("Engine object:", engine);
 console.log(
@@ -48,37 +51,45 @@ console.log(
   // -----------------------------
   // Initialise Stockfish
   // -----------------------------
-  useEffect(() => {
-    const stockfish = new StockfishService();
-    stockfish.init();
-  }, []);
-
+  
   // -----------------------------
   // Engine makes the first move
   // when the player chose Black.
   // -----------------------------
  useEffect(() => {
 
-  if (!engine.isEngineTurn()) {
-    return;
+  async function playFirstMove() {
+
+  await stockfish.init();
+
+    if (!engine.isEngineTurn()) {
+      return;
+    }
+
+    const move = await engine.makeEngineMove();
+
+    if (!move) {
+      return;
+    }
+
+    const copy = new Chess();
+
+    // Opening book returns SAN
+    // (Stockfish won't be used here because this
+    // is only the very first move.)
+    copy.move(move);
+
+    setGame(copy);
   }
 
-  const move = engine.makeEngineMove();
+  playFirstMove();
 
-  if (!move) {
-    return;
-  }
-
-  const copy = new Chess();
-  copy.move(move);
-  setGame(copy);
-
-}, [engine]);
+}, [engine, stockfish]);
 
   // -----------------------------
   // Player Move
   // -----------------------------
-  function onDrop({
+  async function onDrop({
     sourceSquare,
     targetSquare,
   }: {
@@ -119,25 +130,47 @@ console.log(
       }
 
       // Engine replies.
-      const reply =
-        engine.makeEngineMove();
+      let reply = await engine.makeEngineMove();
 
-      if (reply) {
+if (reply === null) {
 
-        console.log("Engine:", reply);
+  console.log("Opening book finished.");
+  console.log("Switching to Stockfish...");
 
-        copy.move(reply);
+  reply = await stockfish.getBestMove(
+    copy.fen()
+  );
 
-      } else {
+}
 
-        console.log(
-          "Opening book finished."
-        );
+console.log("Engine:", reply);
+
+// Detect UCI moves from Stockfish
+const isUCIMove =
+  /^[a-h][1-8][a-h][1-8][qrbn]?$/i.test(reply);
+
+if (isUCIMove) {
+
+  copy.move({
+    from: reply.substring(0, 2),
+    to: reply.substring(2, 4),
+    promotion:
+      reply.length === 5
+        ? reply[4]
+        : "q",
+  });
+
+} else {
+
+  // Opening book SAN move
+  copy.move(reply);
+
+}
 
         // Later:
         // Stockfish takes over here.
 
-      }
+      
 
       setGame(copy);
 
